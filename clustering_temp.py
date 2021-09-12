@@ -27,6 +27,12 @@ def read_csv(filedir):
     f.close()
     return final_result
 
+def write_csv(filedir, content):
+    f = open(filedir, 'w', newline='')
+    wr = csv.writer(f)
+    for item in content:
+        wr.writerow(item)
+    f.close()
 
 
 def clustering(square_array):
@@ -51,22 +57,29 @@ def clustering(square_array):
     name = name_npy[~np.isnan(feature_norm_npy).any(axis=1)]
 
     #하이퍼패러미터 테스트
-    '''objective_function = []
-    for i in range(1, 10):
+    objective_function = []
+    '''for i in range(1, 10):
         clustering= TimeSeriesKMeans(n_clusters=i, init='k-means++')
         clustering.fit(feature_norm_npy)
         objective_function.append(clustering.inertia_)
     print(objective_function)
-
     plt.plot(range(1, 10), objective_function)
     plt.title('elbow method-hyperparameter')
     plt.xlabel('# of clusteres')
     plt.ylabel('objective_function')
     plt.show()'''
 
-    n_cluster = 4  # 튜닝 작업을 거치며 10개로 결정했습니다.
+    n_cluster = 6  # 결정된 수 사용
     km = TimeSeriesKMeans(n_clusters=n_cluster, metric="euclidean", max_iter=150).fit(feature_norm_npy)  # normalization 시계열 데이터를 활용해 euclidean 기반 클러스터링을 진행합니다.
     rlt_tsm = km.predict(feature_norm_npy)
+
+    print(rlt_tsm)
+    temp_list_shell = []
+    for item in rlt_tsm:
+        temp_item = [item]
+        temp_list_shell.append(temp_item)
+    print(temp_list_shell)
+    write_csv('cluster_result.csv', temp_list_shell)
 
     # 클러스터별 분포도를 시각화하기 위해 전처리 작업입니다.
     labels = []
