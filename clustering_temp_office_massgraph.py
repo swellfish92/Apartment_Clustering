@@ -86,7 +86,7 @@ def clustering(square_array):
         temp_item = [item]
         temp_list_shell.append(temp_item)
     print(temp_list_shell)
-    write_csv('./cluster_office/cluster_result.csv', temp_list_shell)
+    write_csv('./cluster_office/cluster_result_for_temp.csv', temp_list_shell)
 
     # 클러스터별 분포도를 시각화하기 위해 전처리 작업입니다.
     labels = []
@@ -269,34 +269,257 @@ def fitModel(model, datafile_name):
 
 import time
 
-#중복온도값 처리 코드
-data = pd.read_csv('temp_daily_data_for_fill.csv')
+#중복온도값 처리 코드(사용X)
+'''data = pd.read_csv('temp_daily_data_for_fill.csv')
 print(data)
 data_mod = data.groupby('Temp')
 result = data_mod.mean()
-#.to_excel('temp_daily_data_result.xlsx')
+#.to_excel('temp_daily_data_result.xlsx')'''
 
-for col_index in result.keys():
+#보간 코드(사용X)
+'''for col_index in result.keys():
     temp_df = result[[col_index]]
     temp_df = temp_df.interpolate(method='linear')
     #print(temp_df)
     result[col_index] = temp_df
 
-result.to_excel('temp_daily_data_result2.xlsx')
+result.to_excel('temp_daily_data_result2.xlsx')'''
+
+#데이터를 가지고 다항회귀 곡선을 구함
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import cross_val_score
+
+#그래프 무지성 뽑기
+'''data = pd.read_csv('temp_daily_data2.csv')
+degrees = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+k = data.keys()
+print(k)
+
+for i in range(16):
+    #ax = plt.subplot(4, 4, i + 1)
+    plt.subplots_adjust(hspace=0.4)
+    X = data[k[0]].to_numpy()
+    y = data[k[i+1]].to_numpy()
+    temp_x = []
+    for item in X:
+        temp_x.append([item])
+    X = temp_x
+    temp_y = []
+    for item in y:
+        temp_y.append([item])
+    y = temp_y
+    plt.scatter(X, y)
+    plt.title("Degree"+str(i))
+    plt.show()
+plt.show()
+
+for i in range(16):
+    ax = plt.subplot(4, 4, i+1)
+    plt.subplots_adjust(hspace=0.4)
+    X = data[k[0]].to_numpy()
+    y = data[k[i+17]].to_numpy()
+    temp_x = []
+    for item in X:
+        temp_x.append([item])
+    X = temp_x
+    temp_y = []
+    for item in y:
+        temp_y.append([item])
+    y = temp_y
+    plt.scatter(X, y)
+    plt.title("Degree"+str(i+16))
+
+plt.show()'''
+
+
+
+
+#회귀식
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+
+
+#data = pd.read_csv('temp_day.csv')
+data = pd.read_csv('./cluster_office/day_temp_graph_scatter.csv')
+degrees = [-7.8, -6.2, -5.6, -5.3, -5.2, -4.9, -4.8, -3.7, -3.5, -3.2, -3, -2.9, -2.6, -2.5, -2.4, -2, -1.8, -1.7, -1.5, -1.4, -1.1, -1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.3, 0, 0.2, 0.3, 0.4, 0.5, 0.9, 1.1, 1.2, 1.3, 1.5, 1.7, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.9, 3, 3.3, 3.4, 3.5, 3.6, 3.8, 4.1, 4.4, 4.6, 4.7, 4.8, 4.9, 5, 5.2, 5.3, 5.5, 5.9, 6.1, 6.3, 6.4, 6.5, 6.7, 6.9, 7, 7.1, 7.3, 7.5, 7.6, 7.8, 8, 8.1, 8.2, 8.3, 8.5, 8.7, 9, 9.2, 9.3, 9.4, 9.5, 9.6, 9.8, 10, 10.1, 10.2, 10.4, 10.6, 11, 11.2, 11.3, 11.4, 11.6, 11.7, 11.9, 12.3, 12.4, 12.7, 12.8, 12.9, 13, 13.4, 13.6, 13.7, 13.8, 13.9, 14.1, 14.2, 14.3, 14.4, 14.6, 14.7, 14.8, 14.9, 15, 15.1, 15.2, 15.3, 15.5, 16.2, 16.6, 16.7, 16.9, 17, 17.1, 17.6, 17.7, 17.8, 18, 18.1, 18.4, 18.6, 18.7, 18.8, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7, 20, 20.1, 20.3, 20.5, 20.6, 20.8, 20.9, 21, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 22, 22.4, 22.6, 22.7, 22.8, 22.9, 23, 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7, 23.8, 23.9, 24, 24.1, 24.2, 24.3, 24.4, 24.5, 24.7, 24.9, 25, 25.1, 25.3, 25.4, 25.5, 25.6, 25.7, 25.8, 25.9, 26, 26.1, 26.3, 26.4, 26.5, 26.7, 26.8, 26.9, 27, 27.2, 27.3, 27.4, 27.9, 28, 28.1, 28.3, 28.4, 28.5, 28.8, 29.2, 29.4, 29.8, 29.9, 30.3, 30.7, 31.4, 31.7]
+k = data.keys()
+print(k)
+
+#단일출력용
+for i in range(len(k)):
+    plt.subplots_adjust(hspace=0.4)
+    X = data[k[0]].to_numpy()
+    y = data[k[i + 1]].to_numpy()
+    temp_x = []
+    for item in X:
+        temp_x.append([item])
+    X = temp_x
+    temp_y = []
+    for item in y:
+        temp_y.append([item])
+    y = temp_y
+
+    poly_features = PolynomialFeatures(degree=3, include_bias=False)
+    X_poly = poly_features.fit_transform(X)
+    lin_reg = LinearRegression()
+    lin_reg.fit(X_poly, y)
+
+    X_new = np.linspace(-8, 32, 100).reshape(100, 1)
+    X_new_poly = poly_features.transform(X_new)
+    y_new = lin_reg.predict(X_new_poly)
+    if i == 0:
+        plt.plot(X, y, "b.")
+        plt.plot(X_new, y_new, "r-", linewidth=2, label="cluster_0")
+    if i == 1:
+        plt.plot(X, y, "g.")
+        plt.plot(X_new, y_new, "y-", linewidth=2, label="cluster_1")
+        plt.title(k[i + 1])
+        #plt.xlabel("$x_1$", fontsize=18)
+        #plt.ylabel("$y$", rotation=0, fontsize=18)
+        plt.legend(loc="upper left", fontsize=14)
+        plt.show()
+
+'''
+#매스그래프 용
+for i in range(16):
+    ax = plt.subplot(4, 4, i + 1)
+    plt.subplots_adjust(hspace=0.4)
+    X = data[k[0]].to_numpy()
+    y = data[k[i + 1]].to_numpy()
+    temp_x = []
+    for item in X:
+        temp_x.append([item])
+    X = temp_x
+    temp_y = []
+    for item in y:
+        temp_y.append([item])
+    y = temp_y
+
+    poly_features = PolynomialFeatures(degree=3, include_bias=False)
+    X_poly = poly_features.fit_transform(X)
+    lin_reg = LinearRegression()
+    lin_reg.fit(X_poly, y)
+
+    X_new = np.linspace(-8, 32, 100).reshape(100, 1)
+    X_new_poly = poly_features.transform(X_new)
+    y_new = lin_reg.predict(X_new_poly)
+    plt.plot(X, y, "b.")
+    plt.plot(X_new, y_new, "r-", linewidth=2, label="Predictions")
+    #plt.legend(loc="upper left", fontsize=14)
+    plt.title(k[i + 1])
+
+plt.show()
+
+for i in range(16):
+    ax = plt.subplot(4, 4, i + 1)
+    plt.subplots_adjust(hspace=0.4)
+    X = data[k[0]].to_numpy()
+    y = data[k[i + 17]].to_numpy()
+    temp_x = []
+    for item in X:
+        temp_x.append([item])
+    X = temp_x
+    temp_y = []
+    for item in y:
+        temp_y.append([item])
+    y = temp_y
+
+    poly_features = PolynomialFeatures(degree=3, include_bias=False)
+    X_poly = poly_features.fit_transform(X)
+    lin_reg = LinearRegression()
+    lin_reg.fit(X_poly, y)
+
+    X_new = np.linspace(-8, 32, 100).reshape(100, 1)
+    X_new_poly = poly_features.transform(X_new)
+    y_new = lin_reg.predict(X_new_poly)
+    plt.plot(X, y, "b.")
+    plt.plot(X_new, y_new, "r-", linewidth=2, label="Predictions")
+    #plt.legend(loc="upper left", fontsize=14)
+    plt.title(k[i + 17])
+
+plt.show()
+'''
+
+
+
+def plot_learning_curves(model, X, y):
+    X_train, X_val, y_train, y_val = train_test_split(X,y, test_size=0.2)
+    train_errors, val_errors = [], []
+    for m in range (1, len(X_train)):
+        model.fit(X_train[:m], y_train[:m])
+        y_train_predict = model.predict(X_train[:m])
+        y_val_predict = model.predict(X_val)
+        train_errors.append(mean_squared_error(y_train[:m], y_train_predict))
+        val_errors.append(mean_squared_error(y_val, y_val_predict))
+    plt.plot(np.sqrt(train_errors), "r-+", linewidth = 2, label = "train set")
+    plt.plot(np.sqrt(val_errors), "b-", linewidth = 3, label = "validation set")
+    plt.xlabel("size of train set")
+    plt.ylabel("RMSE")
+    plt.legend()
+    plt.show()
+
+# 개별 degree 별로 Polynomial 변환합니다.
+for i in degrees:
+    poly_features = PolynomialFeatures(degree=degrees[i], include_bias=False)
+    X_poly = poly_features.fit_transform(X)
+    lin_reg = LinearRegression()
+    plot_learning_curves(lin_reg, X, y)
+    lin_reg.fit(X_poly, y)
+
+    X_new = np.linspace(-8, 32, 100).reshape(100, 1)
+    X_new_poly = poly_features.transform(X_new)
+    y_new = lin_reg.predict(X_new_poly)
+    plt.plot(X, y, "b.")
+    plt.plot(X_new, y_new, "r-", linewidth=2, label="Predictions")
+    plt.xlabel("$x_1$", fontsize=18)
+    plt.ylabel("$y$", rotation=0, fontsize=18)
+    plt.legend(loc="upper left", fontsize=14)
+    plt.show()
+
+
+
+'''# 교차 검증으로 다항 회귀를 평가합니다.
+scores = cross_val_score(pipeline, X.reshape(-1, 1), y, scoring="neg_mean_squared_error", cv=10)
+# Pipeline을 구성하는 세부 객체를 접근하는 named_steps['객체명']을 이용해 회귀 계수 추출
+coefficients = pipeline.named_steps['linear_regression'].coef_
+print('\nDegree {0} 회귀 계수는 {1} 입니다. '.format(degrees[i], np.round(coefficients, 2)))
+print('Degree {0} MSE는 {1} 입니다.'.format(degrees[i], -1 * np.mean(scores)))
+
+X_test = np.linspace(-1, 1, 100)
+# 예측값 곡선
+plt.plot(X_test, pipeline.predict(X_test[:, np.newaxis]), label="Model")
+# 실제 값 곡선
+plt.scatter(X.reshape(-1, 1), y, edgecolor='b', s=20, label="Samples")
+
+plt.xlabel("x");
+plt.ylabel("y");
+#plt.xlim((0, 1));
+#plt.ylim((-2, 2));
+plt.legend(loc="best")
+plt.legend(loc="best")
+plt.title("Degree {}\nMSE = {:.2e}(+/- {:.2e})".format(degrees[i], -scores.mean(), scores.std()))
+plt.show()'''
 
 time.sleep(1000)
 
 
 #클러스터링 부분 코드
-raw_data = read_csv('monthly_data.csv')
+raw_data = read_csv('./cluster_office/온도별사용량_fixed.csv')
 #pricedata = []
 timedata = []
 i = 0
 for item in raw_data:
     if i > 0:
-        timedata.append([item[0], [float(item[27]), float(item[28]), float(item[29]), float(item[30]), float(item[31]), float(item[32]), float(item[33]), float(item[34]), float(item[35]), float(item[36]), float(item[37]), float(item[38])]])
+        #timedata.append([item[0], [float(item[27]), float(item[28]), float(item[29]), float(item[30]), float(item[31]), float(item[32]), float(item[33]), float(item[34]), float(item[35]), float(item[36]), float(item[37]), float(item[38])]])
+        temp_arr = []
+        for iter in range(220):
+            temp_arr.append(float(item[iter+1]))
+        timedata.append([item[0], temp_arr])
         #pricedata.append(float(item[26]))
     i = i + 1
+print(timedata)
 
 clustering(timedata)
 
